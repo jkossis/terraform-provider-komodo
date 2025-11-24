@@ -12,14 +12,14 @@ import (
 )
 
 func TestNewClient(t *testing.T) {
-	server := "http://localhost:8080"
+	endpoint := "http://localhost:8080"
 	username := "test-user"
 	password := "test-pass"
 
-	client := NewClient(server, username, password)
+	client := NewClient(endpoint, username, password)
 
-	if client.server != server {
-		t.Errorf("Expected server %s, got %s", server, client.server)
+	if client.endpoint != endpoint {
+		t.Errorf("Expected endpoint %s, got %s", endpoint, client.endpoint)
 	}
 
 	if client.username != username {
@@ -36,12 +36,12 @@ func TestNewClient(t *testing.T) {
 }
 
 func TestNewClient_trailingSlash(t *testing.T) {
-	server := "http://localhost:8080/"
-	client := NewClient(server, "user", "pass")
+	endpoint := "http://localhost:8080/"
+	client := NewClient(endpoint, "user", "pass")
 
 	expected := "http://localhost:8080"
-	if client.server != expected {
-		t.Errorf("Expected server %s, got %s", expected, client.server)
+	if client.endpoint != expected {
+		t.Errorf("Expected endpoint %s, got %s", expected, client.endpoint)
 	}
 }
 

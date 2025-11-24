@@ -16,7 +16,7 @@ import (
 
 // Client is a Komodo API client.
 type Client struct {
-	server     string
+	endpoint   string
 	username   string
 	password   string
 	httpClient *http.Client
@@ -27,9 +27,9 @@ type Client struct {
 }
 
 // NewClient creates a new Komodo API client.
-func NewClient(server, username, password string) *Client {
+func NewClient(endpoint, username, password string) *Client {
 	return &Client{
-		server:     strings.TrimSuffix(server, "/"),
+		endpoint:   strings.TrimSuffix(endpoint, "/"),
 		username:   username,
 		password:   password,
 		httpClient: http.DefaultClient,
@@ -80,7 +80,7 @@ func (c *Client) login(ctx context.Context) error {
 		return fmt.Errorf("failed to marshal login request: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.server+"/auth/LoginLocalUser", bytes.NewBuffer(jsonData))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.endpoint+"/auth/LoginLocalUser", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return fmt.Errorf("failed to create login request: %w", err)
 	}
@@ -144,7 +144,7 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body interf
 		reqBody = bytes.NewBuffer(jsonData)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, method, c.server+path, reqBody)
+	req, err := http.NewRequestWithContext(ctx, method, c.endpoint+path, reqBody)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -179,7 +179,7 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body interf
 			reqBody = bytes.NewBuffer(jsonData)
 		}
 
-		req, err = http.NewRequestWithContext(ctx, method, c.server+path, reqBody)
+		req, err = http.NewRequestWithContext(ctx, method, c.endpoint+path, reqBody)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create request: %w", err)
 		}

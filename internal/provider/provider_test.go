@@ -30,8 +30,8 @@ var _ = map[string]func() (tfprotov6.ProviderServer, error){
 
 func testAccPreCheck(t *testing.T) {
 	// Verify that required environment variables are set for acceptance tests
-	if v := os.Getenv("KOMODO_SERVER"); v == "" {
-		t.Fatal("KOMODO_SERVER must be set for acceptance tests")
+	if v := os.Getenv("KOMODO_ENDPOINT"); v == "" {
+		t.Fatal("KOMODO_ENDPOINT must be set for acceptance tests")
 	}
 
 	if v := os.Getenv("KOMODO_USERNAME"); v == "" {

@@ -54,7 +54,7 @@ Replace `/path/to/terraform-provider-komodo` with the actual path to your reposi
 Set your Komodo credentials:
 
 ```bash
-export KOMODO_SERVER="https://your-komodo-server.com"
+export KOMODO_ENDPOINT="https://your-komodo-server.com"
 export KOMODO_USERNAME="your-username"
 export KOMODO_PASSWORD="your-password"
 ```
@@ -73,7 +73,7 @@ terraform {
 }
 
 provider "komodo" {
-  # server, username, and password will be read from environment variables
+  # endpoint, username, and password will be read from environment variables
 }
 
 resource "komodo_api_key" "example" {
@@ -112,7 +112,7 @@ terraform destroy
 
 The provider requires three configuration values:
 
-- `server` - The URL of your Komodo server
+- `endpoint` - The URL of your Komodo API endpoint
 - `username` - Your Komodo username
 - `password` - Your Komodo password
 
@@ -122,7 +122,7 @@ These can be configured in three ways:
 
 ```hcl
 provider "komodo" {
-  server   = "https://your-komodo-server.com"
+  endpoint = "https://your-komodo-server.com"
   username = "your-username"
   password = "your-password"
 }
@@ -131,7 +131,7 @@ provider "komodo" {
 #### 2. Via environment variables:
 
 ```bash
-export KOMODO_SERVER="https://your-komodo-server.com"
+export KOMODO_ENDPOINT="https://your-komodo-server.com"
 export KOMODO_USERNAME="your-username"
 export KOMODO_PASSWORD="your-password"
 ```
@@ -140,7 +140,7 @@ export KOMODO_PASSWORD="your-password"
 
 ```hcl
 provider "komodo" {
-  server = "https://your-komodo-server.com"
+  endpoint = "https://your-komodo-server.com"
   # username and password will be read from environment variables
 }
 ```
@@ -209,7 +209,7 @@ If you see an error like "provider registry.terraform.io/jkossis/komodo not foun
 If you see authentication errors:
 
 1. Verify your Komodo credentials are correct
-2. Check that the server URL is correct (including protocol)
+2. Check that the endpoint URL is correct (including protocol)
 3. Ensure your user has permission to create API keys
 
 ### Connection errors
@@ -217,7 +217,7 @@ If you see authentication errors:
 If you see connection errors:
 
 1. Verify your Komodo instance is running and accessible
-2. Check that the server URL is correct
+2. Check that the endpoint URL is correct
 3. Check Komodo logs for any API errors
 
 ## Developing the Provider
@@ -235,7 +235,7 @@ To run the full suite of acceptance tests, you'll need a running Komodo instance
 Set up your test environment:
 
 ```bash
-export KOMODO_SERVER="https://your-komodo-server.com"
+export KOMODO_ENDPOINT="https://your-komodo-server.com"
 export KOMODO_USERNAME="your-username"
 export KOMODO_PASSWORD="your-password"
 ```

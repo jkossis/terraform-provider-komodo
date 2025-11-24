@@ -33,7 +33,7 @@ type KomodoProvider struct {
 
 // KomodoProviderModel describes the provider data model.
 type KomodoProviderModel struct {
-	Server   types.String `tfsdk:"server"`
+	Endpoint types.String `tfsdk:"endpoint"`
 	Username types.String `tfsdk:"username"`
 	Password types.String `tfsdk:"password"`
 }
@@ -47,8 +47,8 @@ func (p *KomodoProvider) Schema(ctx context.Context, req provider.SchemaRequest,
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Terraform provider for managing Komodo resources via the Komodo API.",
 		Attributes: map[string]schema.Attribute{
-			"server": schema.StringAttribute{
-				MarkdownDescription: "The Komodo server URL. Can also be set via the KOMODO_SERVER environment variable.",
+			"endpoint": schema.StringAttribute{
+				MarkdownDescription: "The Komodo API endpoint URL. Can also be set via the KOMODO_ENDPOINT environment variable.",
 				Optional:            true,
 			},
 			"username": schema.StringAttribute{
@@ -74,9 +74,9 @@ func (p *KomodoProvider) Configure(ctx context.Context, req provider.ConfigureRe
 	}
 
 	// Check for environment variables if not set in config
-	server := data.Server.ValueString()
-	if server == "" {
-		server = os.Getenv("KOMODO_SERVER")
+	endpoint := data.Endpoint.ValueString()
+	if endpoint == "" {
+		endpoint = os.Getenv("KOMODO_ENDPOINT")
 	}
 
 	username := data.Username.ValueString()
@@ -90,11 +90,11 @@ func (p *KomodoProvider) Configure(ctx context.Context, req provider.ConfigureRe
 	}
 
 	// Validate required configuration
-	if server == "" {
+	if endpoint == "" {
 		resp.Diagnostics.AddError(
-			"Missing Komodo Server",
-			"The provider cannot create the Komodo API client as there is a missing or empty value for the Komodo server. "+
-				"Set the server value in the configuration or use the KOMODO_SERVER environment variable. "+
+			"Missing Komodo Endpoint",
+			"The provider cannot create the Komodo API client as there is a missing or empty value for the Komodo endpoint. "+
+				"Set the endpoint value in the configuration or use the KOMODO_ENDPOINT environment variable. "+
 				"If either is already set, ensure the value is not empty.",
 		)
 	}
@@ -122,7 +122,7 @@ func (p *KomodoProvider) Configure(ctx context.Context, req provider.ConfigureRe
 	}
 
 	// Create Komodo API client
-	komodoClient := client.NewClient(server, username, password)
+	komodoClient := client.NewClient(endpoint, username, password)
 	resp.DataSourceData = komodoClient
 	resp.ResourceData = komodoClient
 }

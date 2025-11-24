@@ -13,7 +13,7 @@ Terraform provider for managing Komodo resources via the Komodo API.
 
 ```terraform
 provider "komodo" {
-  server   = "https://your-komodo-server.com"
+  endpoint = "https://your-komodo-server.com"
   username = "your-username"
   password = "your-password"
 }
@@ -24,6 +24,6 @@ provider "komodo" {
 
 ### Optional
 
+- `endpoint` (String) The Komodo API endpoint URL. Can also be set via the KOMODO_ENDPOINT environment variable.
 - `password` (String, Sensitive) The Komodo password. Can also be set via the KOMODO_PASSWORD environment variable.
-- `server` (String) The Komodo server URL. Can also be set via the KOMODO_SERVER environment variable.
 - `username` (String) The Komodo username. Can also be set via the KOMODO_USERNAME environment variable.
