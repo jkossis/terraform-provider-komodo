@@ -123,11 +123,11 @@ func TestAccApiKeyResource_import(t *testing.T) {
 			},
 			// Import the same resource by ID
 			{
-				Config:                            testAccApiKeyResourceConfig_basic("test-key-import"),
-				ResourceName:                      "komodo_api_key.test",
-				ImportState:                       true,
-				ImportStateVerify:                 true,
-				ImportStateId:                     keyID,
+				Config:                               testAccApiKeyResourceConfig_basic("test-key-import"),
+				ResourceName:                         "komodo_api_key.test",
+				ImportState:                          true,
+				ImportStateVerify:                    true,
+				ImportStateId:                        keyID,
 				ImportStateVerifyIdentifierAttribute: "key",
 				// Secret is only available on creation
 				ImportStateVerifyIgnore: []string{"secret"},
