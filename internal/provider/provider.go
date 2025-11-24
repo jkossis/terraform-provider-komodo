@@ -5,7 +5,7 @@ package provider
 
 import (
 	"context"
-	"net/http"
+	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
@@ -14,44 +14,58 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"terraform-provider-komodo/internal/client"
 )
 
-// Ensure ScaffoldingProvider satisfies various provider interfaces.
-var _ provider.Provider = &ScaffoldingProvider{}
-var _ provider.ProviderWithFunctions = &ScaffoldingProvider{}
-var _ provider.ProviderWithEphemeralResources = &ScaffoldingProvider{}
+// Ensure KomodoProvider satisfies various provider interfaces.
+var _ provider.Provider = &KomodoProvider{}
+var _ provider.ProviderWithFunctions = &KomodoProvider{}
+var _ provider.ProviderWithEphemeralResources = &KomodoProvider{}
 
-// ScaffoldingProvider defines the provider implementation.
-type ScaffoldingProvider struct {
+// KomodoProvider defines the provider implementation.
+type KomodoProvider struct {
 	// version is set to the provider version on release, "dev" when the
 	// provider is built and ran locally, and "test" when running acceptance
 	// testing.
 	version string
 }
 
-// ScaffoldingProviderModel describes the provider data model.
-type ScaffoldingProviderModel struct {
-	Endpoint types.String `tfsdk:"endpoint"`
+// KomodoProviderModel describes the provider data model.
+type KomodoProviderModel struct {
+	Server   types.String `tfsdk:"server"`
+	Username types.String `tfsdk:"username"`
+	Password types.String `tfsdk:"password"`
 }
 
-func (p *ScaffoldingProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
-	resp.TypeName = "scaffolding"
+func (p *KomodoProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
+	resp.TypeName = "komodo"
 	resp.Version = p.version
 }
 
-func (p *ScaffoldingProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
+func (p *KomodoProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		MarkdownDescription: "Terraform provider for managing Komodo resources via the Komodo API.",
 		Attributes: map[string]schema.Attribute{
-			"endpoint": schema.StringAttribute{
-				MarkdownDescription: "Example provider attribute",
+			"server": schema.StringAttribute{
+				MarkdownDescription: "The Komodo server URL. Can also be set via the KOMODO_SERVER environment variable.",
 				Optional:            true,
+			},
+			"username": schema.StringAttribute{
+				MarkdownDescription: "The Komodo username. Can also be set via the KOMODO_USERNAME environment variable.",
+				Optional:            true,
+			},
+			"password": schema.StringAttribute{
+				MarkdownDescription: "The Komodo password. Can also be set via the KOMODO_PASSWORD environment variable.",
+				Optional:            true,
+				Sensitive:           true,
 			},
 		},
 	}
 }
 
-func (p *ScaffoldingProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
-	var data ScaffoldingProviderModel
+func (p *KomodoProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
+	var data KomodoProviderModel
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 
@@ -59,42 +73,81 @@ func (p *ScaffoldingProvider) Configure(ctx context.Context, req provider.Config
 		return
 	}
 
-	// Configuration values are now available.
-	// if data.Endpoint.IsNull() { /* ... */ }
+	// Check for environment variables if not set in config
+	server := data.Server.ValueString()
+	if server == "" {
+		server = os.Getenv("KOMODO_SERVER")
+	}
 
-	// Example client configuration for data sources and resources
-	client := http.DefaultClient
-	resp.DataSourceData = client
-	resp.ResourceData = client
+	username := data.Username.ValueString()
+	if username == "" {
+		username = os.Getenv("KOMODO_USERNAME")
+	}
+
+	password := data.Password.ValueString()
+	if password == "" {
+		password = os.Getenv("KOMODO_PASSWORD")
+	}
+
+	// Validate required configuration
+	if server == "" {
+		resp.Diagnostics.AddError(
+			"Missing Komodo Server",
+			"The provider cannot create the Komodo API client as there is a missing or empty value for the Komodo server. "+
+				"Set the server value in the configuration or use the KOMODO_SERVER environment variable. "+
+				"If either is already set, ensure the value is not empty.",
+		)
+	}
+
+	if username == "" {
+		resp.Diagnostics.AddError(
+			"Missing Komodo Username",
+			"The provider cannot create the Komodo API client as there is a missing or empty value for the Komodo username. "+
+				"Set the username value in the configuration or use the KOMODO_USERNAME environment variable. "+
+				"If either is already set, ensure the value is not empty.",
+		)
+	}
+
+	if password == "" {
+		resp.Diagnostics.AddError(
+			"Missing Komodo Password",
+			"The provider cannot create the Komodo API client as there is a missing or empty value for the Komodo password. "+
+				"Set the password value in the configuration or use the KOMODO_PASSWORD environment variable. "+
+				"If either is already set, ensure the value is not empty.",
+		)
+	}
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Create Komodo API client
+	komodoClient := client.NewClient(server, username, password)
+	resp.DataSourceData = komodoClient
+	resp.ResourceData = komodoClient
 }
 
-func (p *ScaffoldingProvider) Resources(ctx context.Context) []func() resource.Resource {
+func (p *KomodoProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
-		NewExampleResource,
+		NewApiKeyResource,
 	}
 }
 
-func (p *ScaffoldingProvider) EphemeralResources(ctx context.Context) []func() ephemeral.EphemeralResource {
-	return []func() ephemeral.EphemeralResource{
-		NewExampleEphemeralResource,
-	}
+func (p *KomodoProvider) EphemeralResources(ctx context.Context) []func() ephemeral.EphemeralResource {
+	return []func() ephemeral.EphemeralResource{}
 }
 
-func (p *ScaffoldingProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
-	return []func() datasource.DataSource{
-		NewExampleDataSource,
-	}
+func (p *KomodoProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
+	return []func() datasource.DataSource{}
 }
 
-func (p *ScaffoldingProvider) Functions(ctx context.Context) []func() function.Function {
-	return []func() function.Function{
-		NewExampleFunction,
-	}
+func (p *KomodoProvider) Functions(ctx context.Context) []func() function.Function {
+	return []func() function.Function{}
 }
 
 func New(version string) func() provider.Provider {
 	return func() provider.Provider {
-		return &ScaffoldingProvider{
+		return &KomodoProvider{
 			version: version,
 		}
 	}

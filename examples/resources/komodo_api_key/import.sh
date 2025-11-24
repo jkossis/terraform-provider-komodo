@@ -1,0 +1,2 @@
+# Import an existing API key by its key ID
+terraform import komodo_api_key.example K-EDXr0hotlGVGIM67mPSXpPpkvp3j6e92fxybUsNJ
