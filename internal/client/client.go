@@ -38,6 +38,12 @@ func NewClient(endpoint, username, password string) *Client {
 
 // LoginResponse represents the response from the login endpoint.
 type LoginResponse struct {
+	Data LoginResponseData `json:"data"`
+	Type string            `json:"type"`
+}
+
+// LoginResponseData contains the JWT from a login response.
+type LoginResponseData struct {
 	JWT string `json:"jwt"`
 }
 
@@ -80,7 +86,7 @@ func (c *Client) login(ctx context.Context) error {
 		return fmt.Errorf("failed to marshal login request: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.endpoint+"/auth/LoginLocalUser", bytes.NewBuffer(jsonData))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.endpoint+"/auth/login/LoginLocalUser", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return fmt.Errorf("failed to create login request: %w", err)
 	}
@@ -104,7 +110,7 @@ func (c *Client) login(ctx context.Context) error {
 	}
 
 	c.mu.Lock()
-	c.token = loginResp.JWT
+	c.token = loginResp.Data.JWT
 	c.mu.Unlock()
 
 	return nil
@@ -149,7 +155,7 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body interf
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	req.Header.Set("Authorization", token)
+	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.httpClient.Do(req)
@@ -184,7 +190,7 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body interf
 			return nil, fmt.Errorf("failed to create request: %w", err)
 		}
 
-		req.Header.Set("Authorization", token)
+		req.Header.Set("Authorization", "Bearer "+token)
 		req.Header.Set("Content-Type", "application/json")
 
 		resp, err = c.httpClient.Do(req)
@@ -198,12 +204,7 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body interf
 
 // ListApiKeys lists all API keys for the authenticated user.
 func (c *Client) ListApiKeys(ctx context.Context) ([]ApiKey, error) {
-	listReq := ListApiKeysRequest{
-		Type:   "ListApiKeys",
-		Params: map[string]interface{}{},
-	}
-
-	resp, err := c.doRequest(ctx, http.MethodPost, "/read", listReq)
+	resp, err := c.doRequest(ctx, http.MethodPost, "/read/ListApiKeys", struct{}{})
 	if err != nil {
 		return nil, err
 	}
@@ -240,7 +241,7 @@ func (c *Client) GetApiKey(ctx context.Context, keyID string) (*ApiKey, error) {
 
 // CreateApiKey creates a new API key.
 func (c *Client) CreateApiKey(ctx context.Context, req CreateApiKeyRequest) (*ApiKey, error) {
-	resp, err := c.doRequest(ctx, http.MethodPost, "/user/CreateApiKey", req)
+	resp, err := c.doRequest(ctx, http.MethodPost, "/auth/manage/CreateApiKey", req)
 	if err != nil {
 		return nil, err
 	}
@@ -284,7 +285,7 @@ func (c *Client) CreateApiKey(ctx context.Context, req CreateApiKeyRequest) (*Ap
 
 // DeleteApiKey deletes an API key.
 func (c *Client) DeleteApiKey(ctx context.Context, req DeleteApiKeyRequest) error {
-	resp, err := c.doRequest(ctx, http.MethodPost, "/user/DeleteApiKey", req)
+	resp, err := c.doRequest(ctx, http.MethodPost, "/auth/manage/DeleteApiKey", req)
 	if err != nil {
 		return err
 	}

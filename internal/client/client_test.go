@@ -50,8 +50,8 @@ func TestLogin(t *testing.T) {
 		if r.Method != http.MethodPost {
 			t.Errorf("Expected POST request, got %s", r.Method)
 		}
-		if r.URL.Path != "/auth/LoginLocalUser" {
-			t.Errorf("Expected path /auth/LoginLocalUser, got %s", r.URL.Path)
+		if r.URL.Path != "/auth/login/LoginLocalUser" {
+			t.Errorf("Expected path /auth/login/LoginLocalUser, got %s", r.URL.Path)
 		}
 
 		// Verify request body
@@ -70,7 +70,8 @@ func TestLogin(t *testing.T) {
 
 		// Return mock JWT
 		resp := LoginResponse{
-			JWT: "test-jwt-token",
+			Data: LoginResponseData{JWT: "test-jwt-token"},
+			Type: "Jwt",
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -97,10 +98,10 @@ func TestListApiKeys(t *testing.T) {
 
 		// First call is login
 		if callCount == 1 {
-			if r.URL.Path != "/auth/LoginLocalUser" {
+			if r.URL.Path != "/auth/login/LoginLocalUser" {
 				t.Errorf("Expected first call to be login, got %s", r.URL.Path)
 			}
-			resp := LoginResponse{JWT: "test-jwt"}
+			resp := LoginResponse{Data: LoginResponseData{JWT: "test-jwt"}, Type: "Jwt"}
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(resp)
 			return
@@ -110,24 +111,14 @@ func TestListApiKeys(t *testing.T) {
 		if r.Method != http.MethodPost {
 			t.Errorf("Expected POST request, got %s", r.Method)
 		}
-		if r.URL.Path != "/read" {
-			t.Errorf("Expected path /read, got %s", r.URL.Path)
+		if r.URL.Path != "/read/ListApiKeys" {
+			t.Errorf("Expected path /read/ListApiKeys, got %s", r.URL.Path)
 		}
 
 		// Check authorization header
 		auth := r.Header.Get("Authorization")
-		if auth != "test-jwt" {
-			t.Errorf("Expected Authorization header 'test-jwt', got %s", auth)
-		}
-
-		// Verify request body
-		var req ListApiKeysRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			t.Fatalf("Failed to decode request body: %v", err)
-		}
-
-		if req.Type != "ListApiKeys" {
-			t.Errorf("Expected type 'ListApiKeys', got %s", req.Type)
+		if auth != "Bearer test-jwt" {
+			t.Errorf("Expected Authorization header 'Bearer test-jwt', got %s", auth)
 		}
 
 		// Return mock response
@@ -182,7 +173,7 @@ func TestGetApiKey(t *testing.T) {
 
 		// First call is login
 		if callCount == 1 {
-			resp := LoginResponse{JWT: "test-jwt"}
+			resp := LoginResponse{Data: LoginResponseData{JWT: "test-jwt"}, Type: "Jwt"}
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(resp)
 			return
@@ -239,7 +230,7 @@ func TestGetApiKey_notFound(t *testing.T) {
 
 		// First call is login
 		if callCount == 1 {
-			resp := LoginResponse{JWT: "test-jwt"}
+			resp := LoginResponse{Data: LoginResponseData{JWT: "test-jwt"}, Type: "Jwt"}
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(resp)
 			return
@@ -273,7 +264,7 @@ func TestCreateApiKey(t *testing.T) {
 
 		// First call is login
 		if callCount == 1 {
-			resp := LoginResponse{JWT: "test-jwt"}
+			resp := LoginResponse{Data: LoginResponseData{JWT: "test-jwt"}, Type: "Jwt"}
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(resp)
 			return
@@ -284,8 +275,8 @@ func TestCreateApiKey(t *testing.T) {
 			if r.Method != http.MethodPost {
 				t.Errorf("Expected POST request, got %s", r.Method)
 			}
-			if r.URL.Path != "/user/CreateApiKey" {
-				t.Errorf("Expected path /user/CreateApiKey, got %s", r.URL.Path)
+			if r.URL.Path != "/auth/manage/CreateApiKey" {
+				t.Errorf("Expected path /auth/manage/CreateApiKey, got %s", r.URL.Path)
 			}
 
 			// Verify request body
@@ -316,8 +307,8 @@ func TestCreateApiKey(t *testing.T) {
 
 		// Third call is ListApiKeys (via GetApiKey)
 		if callCount == 3 {
-			if r.URL.Path != "/read" {
-				t.Errorf("Expected path /read, got %s", r.URL.Path)
+			if r.URL.Path != "/read/ListApiKeys" {
+				t.Errorf("Expected path /read/ListApiKeys, got %s", r.URL.Path)
 			}
 
 			// Return the key in the list
@@ -377,7 +368,7 @@ func TestDeleteApiKey(t *testing.T) {
 
 		// First call is login
 		if callCount == 1 {
-			resp := LoginResponse{JWT: "test-jwt"}
+			resp := LoginResponse{Data: LoginResponseData{JWT: "test-jwt"}, Type: "Jwt"}
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(resp)
 			return
@@ -386,8 +377,8 @@ func TestDeleteApiKey(t *testing.T) {
 		if r.Method != http.MethodPost {
 			t.Errorf("Expected POST request, got %s", r.Method)
 		}
-		if r.URL.Path != "/user/DeleteApiKey" {
-			t.Errorf("Expected path /user/DeleteApiKey, got %s", r.URL.Path)
+		if r.URL.Path != "/auth/manage/DeleteApiKey" {
+			t.Errorf("Expected path /auth/manage/DeleteApiKey, got %s", r.URL.Path)
 		}
 
 		// Verify request body
@@ -421,8 +412,8 @@ func TestClient_tokenRefresh(t *testing.T) {
 		callCount++
 
 		// Handle login requests
-		if r.URL.Path == "/auth/LoginLocalUser" {
-			resp := LoginResponse{JWT: "test-jwt"}
+		if r.URL.Path == "/auth/login/LoginLocalUser" {
+			resp := LoginResponse{Data: LoginResponseData{JWT: "test-jwt"}, Type: "Jwt"}
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(resp)
 			return
@@ -455,8 +446,8 @@ func TestClient_errorHandling(t *testing.T) {
 		callCount++
 
 		// Handle login
-		if r.URL.Path == "/auth/LoginLocalUser" {
-			resp := LoginResponse{JWT: "test-jwt"}
+		if r.URL.Path == "/auth/login/LoginLocalUser" {
+			resp := LoginResponse{Data: LoginResponseData{JWT: "test-jwt"}, Type: "Jwt"}
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(resp)
 			return
