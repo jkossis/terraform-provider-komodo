@@ -236,18 +236,17 @@ To run the full suite of acceptance tests, you'll need a running Komodo instance
 Set up your test environment:
 
 ```bash
-export TF_ACC=1
 export KOMODO_ENDPOINT="https://your-komodo-server.com"
 export KOMODO_USERNAME="your-username"
 export KOMODO_PASSWORD="your-password"
 ```
 
-Acceptance tests are skipped when `TF_ACC` is unset. When `TF_ACC=1`, `KOMODO_ENDPOINT`, `KOMODO_USERNAME`, and `KOMODO_PASSWORD` must all be set.
+`mise run testacc` sets `TF_ACC=1`; `KOMODO_ENDPOINT`, `KOMODO_USERNAME`, and `KOMODO_PASSWORD` must all be set. Put local credentials in ignored `mise.local.toml` or export them in your shell.
 
 Then run the tests:
 
 ```bash
-make testacc
+mise run testacc
 ```
 
 ## License
