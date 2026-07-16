@@ -110,13 +110,14 @@ terraform destroy
 
 ### Configuration
 
-The provider requires three configuration values:
+The provider requires three effective configuration values:
 
 - `endpoint` - The URL of your Komodo API endpoint
 - `username` - Your Komodo username
 - `password` - Your Komodo password
 
-These can be configured in three ways:
+The `endpoint`, `username`, and `password` provider attributes are optional because each can be supplied through its matching environment variable. Configuration values take precedence over environment variables.
+An explicitly empty or unknown configuration value is an error and does not fall back to its environment variable.
 
 #### 1. In the provider block:
 
@@ -235,10 +236,13 @@ To run the full suite of acceptance tests, you'll need a running Komodo instance
 Set up your test environment:
 
 ```bash
+export TF_ACC=1
 export KOMODO_ENDPOINT="https://your-komodo-server.com"
 export KOMODO_USERNAME="your-username"
 export KOMODO_PASSWORD="your-password"
 ```
+
+Acceptance tests are skipped when `TF_ACC` is unset. When `TF_ACC=1`, `KOMODO_ENDPOINT`, `KOMODO_USERNAME`, and `KOMODO_PASSWORD` must all be set.
 
 Then run the tests:
 

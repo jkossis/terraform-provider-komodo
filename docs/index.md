@@ -12,10 +12,17 @@ Terraform provider for managing Komodo resources via the Komodo API.
 ## Example Usage
 
 ```terraform
+terraform {
+  required_providers {
+    komodo = {
+      source = "jkossis/komodo"
+    }
+  }
+}
+
 provider "komodo" {
-  endpoint = "https://your-komodo-server.com"
-  username = "your-username"
-  password = "your-password"
+  # endpoint, username, and password may be set here or with
+  # KOMODO_ENDPOINT, KOMODO_USERNAME, and KOMODO_PASSWORD.
 }
 ```
 

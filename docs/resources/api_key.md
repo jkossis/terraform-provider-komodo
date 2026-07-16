@@ -22,21 +22,14 @@ terraform {
 }
 
 provider "komodo" {
-  endpoint = "https://your-komodo-server.com"
-  username = "your-username"
-  password = "your-password"
+  # endpoint, username, and password may be set here or with
+  # KOMODO_ENDPOINT, KOMODO_USERNAME, and KOMODO_PASSWORD.
 }
 
 # Create an API key that never expires
 resource "komodo_api_key" "example" {
   name    = "my-api-key"
   expires = 0
-}
-
-# Create an API key with expiration
-resource "komodo_api_key" "expiring" {
-  name    = "expiring-key"
-  expires = 1735689600000 # Timestamp in milliseconds
 }
 
 # Output the credentials

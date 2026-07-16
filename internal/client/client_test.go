@@ -91,7 +91,7 @@ func TestLogin(t *testing.T) {
 	}
 }
 
-func TestListApiKeys(t *testing.T) {
+func TestListAPIKeys(t *testing.T) {
 	callCount := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		callCount++
@@ -122,7 +122,7 @@ func TestListApiKeys(t *testing.T) {
 		}
 
 		// Return mock response
-		keys := []ApiKey{
+		keys := []APIKey{
 			{
 				Key:       "K-test1",
 				Secret:    "",
@@ -147,7 +147,7 @@ func TestListApiKeys(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "test-user", "test-pass")
-	keys, err := client.ListApiKeys(context.Background())
+	keys, err := client.ListAPIKeys(context.Background())
 
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
@@ -166,7 +166,7 @@ func TestListApiKeys(t *testing.T) {
 	}
 }
 
-func TestGetApiKey(t *testing.T) {
+func TestGetAPIKey(t *testing.T) {
 	callCount := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		callCount++
@@ -179,8 +179,8 @@ func TestGetApiKey(t *testing.T) {
 			return
 		}
 
-		// Return list of keys for GetApiKey to search through
-		keys := []ApiKey{
+		// Return list of keys for GetAPIKey to search through.
+		keys := []APIKey{
 			{
 				Key:       "K-test1",
 				UserID:    "user-123",
@@ -205,7 +205,7 @@ func TestGetApiKey(t *testing.T) {
 	client := NewClient(server.URL, "test-user", "test-pass")
 
 	// Test finding existing key
-	key, err := client.GetApiKey(context.Background(), "K-test1")
+	key, err := client.GetAPIKey(context.Background(), "K-test1")
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -223,7 +223,7 @@ func TestGetApiKey(t *testing.T) {
 	}
 }
 
-func TestGetApiKey_notFound(t *testing.T) {
+func TestGetAPIKey_notFound(t *testing.T) {
 	callCount := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		callCount++
@@ -237,7 +237,7 @@ func TestGetApiKey_notFound(t *testing.T) {
 		}
 
 		// Return empty list
-		keys := []ApiKey{}
+		keys := []APIKey{}
 
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(keys)
@@ -247,7 +247,7 @@ func TestGetApiKey_notFound(t *testing.T) {
 	client := NewClient(server.URL, "test-user", "test-pass")
 
 	// Test finding non-existent key
-	key, err := client.GetApiKey(context.Background(), "K-nonexistent")
+	key, err := client.GetAPIKey(context.Background(), "K-nonexistent")
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -257,7 +257,7 @@ func TestGetApiKey_notFound(t *testing.T) {
 	}
 }
 
-func TestCreateApiKey(t *testing.T) {
+func TestCreateAPIKey(t *testing.T) {
 	callCount := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		callCount++
@@ -270,7 +270,7 @@ func TestCreateApiKey(t *testing.T) {
 			return
 		}
 
-		// Second call is CreateApiKey
+		// Second call is CreateAPIKey.
 		if callCount == 2 {
 			if r.Method != http.MethodPost {
 				t.Errorf("Expected POST request, got %s", r.Method)
@@ -280,7 +280,7 @@ func TestCreateApiKey(t *testing.T) {
 			}
 
 			// Verify request body
-			var req CreateApiKeyRequest
+			var req CreateAPIKeyRequest
 			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 				t.Fatalf("Failed to decode request body: %v", err)
 			}
@@ -305,14 +305,14 @@ func TestCreateApiKey(t *testing.T) {
 			return
 		}
 
-		// Third call is ListApiKeys (via GetApiKey)
+		// Third call is ListAPIKeys (via GetAPIKey).
 		if callCount == 3 {
 			if r.URL.Path != "/read/ListApiKeys" {
 				t.Errorf("Expected path /read/ListApiKeys, got %s", r.URL.Path)
 			}
 
 			// Return the key in the list
-			keys := []ApiKey{
+			keys := []APIKey{
 				{
 					Key:       "K-newkey123",
 					Secret:    "",
@@ -331,7 +331,7 @@ func TestCreateApiKey(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "test-user", "test-pass")
-	key, err := client.CreateApiKey(context.Background(), CreateApiKeyRequest{
+	key, err := client.CreateAPIKey(context.Background(), CreateAPIKeyRequest{
 		Name:    "new-key",
 		Expires: 0,
 	})
@@ -361,7 +361,7 @@ func TestCreateApiKey(t *testing.T) {
 	}
 }
 
-func TestDeleteApiKey(t *testing.T) {
+func TestDeleteAPIKey(t *testing.T) {
 	callCount := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		callCount++
@@ -382,7 +382,7 @@ func TestDeleteApiKey(t *testing.T) {
 		}
 
 		// Verify request body
-		var req DeleteApiKeyRequest
+		var req DeleteAPIKeyRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			t.Fatalf("Failed to decode request body: %v", err)
 		}
@@ -397,7 +397,7 @@ func TestDeleteApiKey(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "test-user", "test-pass")
-	err := client.DeleteApiKey(context.Background(), DeleteApiKeyRequest{
+	err := client.DeleteAPIKey(context.Background(), DeleteAPIKeyRequest{
 		Key: "K-test123",
 	})
 
@@ -426,14 +426,14 @@ func TestClient_tokenRefresh(t *testing.T) {
 		}
 
 		// Subsequent calls succeed
-		keys := []ApiKey{}
+		keys := []APIKey{}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(keys)
 	}))
 	defer server.Close()
 
 	client := NewClient(server.URL, "test-user", "test-pass")
-	_, err := client.ListApiKeys(context.Background())
+	_, err := client.ListAPIKeys(context.Background())
 
 	if err != nil {
 		t.Fatalf("Expected no error after token refresh, got %v", err)
@@ -460,20 +460,20 @@ func TestClient_errorHandling(t *testing.T) {
 
 	client := NewClient(server.URL, "test-user", "test-pass")
 
-	// Test ListApiKeys error
-	_, err := client.ListApiKeys(context.Background())
+	// Test ListAPIKeys error.
+	_, err := client.ListAPIKeys(context.Background())
 	if err == nil {
 		t.Error("Expected error for 500 response")
 	}
 
-	// Test CreateApiKey error
-	_, err = client.CreateApiKey(context.Background(), CreateApiKeyRequest{Name: "test"})
+	// Test CreateAPIKey error.
+	_, err = client.CreateAPIKey(context.Background(), CreateAPIKeyRequest{Name: "test"})
 	if err == nil {
 		t.Error("Expected error for 500 response")
 	}
 
-	// Test DeleteApiKey error
-	err = client.DeleteApiKey(context.Background(), DeleteApiKeyRequest{Key: "test"})
+	// Test DeleteAPIKey error.
+	err = client.DeleteAPIKey(context.Background(), DeleteAPIKeyRequest{Key: "test"})
 	if err == nil {
 		t.Error("Expected error for 500 response")
 	}
@@ -487,7 +487,7 @@ func TestClient_loginError(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "bad-user", "bad-pass")
-	_, err := client.ListApiKeys(context.Background())
+	_, err := client.ListAPIKeys(context.Background())
 
 	if err == nil {
 		t.Error("Expected error for failed login")

@@ -47,8 +47,8 @@ type LoginResponseData struct {
 	JWT string `json:"jwt"`
 }
 
-// ApiKey represents a Komodo API key.
-type ApiKey struct {
+// APIKey represents a Komodo API key.
+type APIKey struct {
 	Key       string `json:"key"`
 	Secret    string `json:"secret"`
 	UserID    string `json:"user_id"`
@@ -57,19 +57,19 @@ type ApiKey struct {
 	Expires   int64  `json:"expires"`
 }
 
-// CreateApiKeyRequest represents the request to create an API key.
-type CreateApiKeyRequest struct {
+// CreateAPIKeyRequest represents the request to create an API key.
+type CreateAPIKeyRequest struct {
 	Name    string `json:"name"`
 	Expires int64  `json:"expires"`
 }
 
-// DeleteApiKeyRequest represents the request to delete an API key.
-type DeleteApiKeyRequest struct {
+// DeleteAPIKeyRequest represents the request to delete an API key.
+type DeleteAPIKeyRequest struct {
 	Key string `json:"key"`
 }
 
-// ListApiKeysRequest represents the request to list API keys.
-type ListApiKeysRequest struct {
+// ListAPIKeysRequest represents the request to list API keys.
+type ListAPIKeysRequest struct {
 	Type   string                 `json:"type"`
 	Params map[string]interface{} `json:"params"`
 }
@@ -202,8 +202,8 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body interf
 	return resp, nil
 }
 
-// ListApiKeys lists all API keys for the authenticated user.
-func (c *Client) ListApiKeys(ctx context.Context) ([]ApiKey, error) {
+// ListAPIKeys lists all API keys for the authenticated user.
+func (c *Client) ListAPIKeys(ctx context.Context) ([]APIKey, error) {
 	resp, err := c.doRequest(ctx, http.MethodPost, "/read/ListApiKeys", struct{}{})
 	if err != nil {
 		return nil, err
@@ -215,7 +215,7 @@ func (c *Client) ListApiKeys(ctx context.Context) ([]ApiKey, error) {
 		return nil, fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
-	var keys []ApiKey
+	var keys []APIKey
 	if err := json.NewDecoder(resp.Body).Decode(&keys); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
@@ -223,9 +223,9 @@ func (c *Client) ListApiKeys(ctx context.Context) ([]ApiKey, error) {
 	return keys, nil
 }
 
-// GetApiKey gets information about a specific API key by its key ID.
-func (c *Client) GetApiKey(ctx context.Context, keyID string) (*ApiKey, error) {
-	keys, err := c.ListApiKeys(ctx)
+// GetAPIKey gets information about a specific API key by its key ID.
+func (c *Client) GetAPIKey(ctx context.Context, keyID string) (*APIKey, error) {
+	keys, err := c.ListAPIKeys(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -239,8 +239,8 @@ func (c *Client) GetApiKey(ctx context.Context, keyID string) (*ApiKey, error) {
 	return nil, nil
 }
 
-// CreateApiKey creates a new API key.
-func (c *Client) CreateApiKey(ctx context.Context, req CreateApiKeyRequest) (*ApiKey, error) {
+// CreateAPIKey creates a new API key.
+func (c *Client) CreateAPIKey(ctx context.Context, req CreateAPIKeyRequest) (*APIKey, error) {
 	resp, err := c.doRequest(ctx, http.MethodPost, "/auth/manage/CreateApiKey", req)
 	if err != nil {
 		return nil, err
@@ -252,7 +252,7 @@ func (c *Client) CreateApiKey(ctx context.Context, req CreateApiKeyRequest) (*Ap
 		return nil, fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
-	var key ApiKey
+	var key APIKey
 	if err := json.NewDecoder(resp.Body).Decode(&key); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
@@ -262,7 +262,7 @@ func (c *Client) CreateApiKey(ctx context.Context, req CreateApiKeyRequest) (*Ap
 	key.Expires = req.Expires
 
 	// Fetch the full key details to get user_id and created_at
-	fullKey, err := c.GetApiKey(ctx, key.Key)
+	fullKey, err := c.GetAPIKey(ctx, key.Key)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch full key details: %w", err)
 	}
@@ -283,8 +283,8 @@ func (c *Client) CreateApiKey(ctx context.Context, req CreateApiKeyRequest) (*Ap
 	return &key, nil
 }
 
-// DeleteApiKey deletes an API key.
-func (c *Client) DeleteApiKey(ctx context.Context, req DeleteApiKeyRequest) error {
+// DeleteAPIKey deletes an API key.
+func (c *Client) DeleteAPIKey(ctx context.Context, req DeleteAPIKeyRequest) error {
 	resp, err := c.doRequest(ctx, http.MethodPost, "/auth/manage/DeleteApiKey", req)
 	if err != nil {
 		return err

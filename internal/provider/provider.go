@@ -8,20 +8,26 @@ import (
 	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
-	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
-	"github.com/hashicorp/terraform-plugin-framework/function"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	"terraform-provider-komodo/internal/client"
+	"github.com/jkossis/terraform-provider-komodo/internal/client"
+)
+
+const (
+	providerTypeName  = "komodo"
+	typeNamePrefix    = providerTypeName
+	komodoEndpointEnv = "KOMODO_ENDPOINT"
+	komodoUsernameEnv = "KOMODO_USERNAME"
+	komodoPasswordEnv = "KOMODO_PASSWORD"
 )
 
 // Ensure KomodoProvider satisfies various provider interfaces.
 var _ provider.Provider = &KomodoProvider{}
-var _ provider.ProviderWithFunctions = &KomodoProvider{}
-var _ provider.ProviderWithEphemeralResources = &KomodoProvider{}
 
 // KomodoProvider defines the provider implementation.
 type KomodoProvider struct {
@@ -38,8 +44,21 @@ type KomodoProviderModel struct {
 	Password types.String `tfsdk:"password"`
 }
 
+type providerConfig struct {
+	endpoint string
+	username string
+	password string
+}
+
+type providerStringConfigSource struct {
+	value       types.String
+	attribute   string
+	envVar      string
+	displayName string
+}
+
 func (p *KomodoProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
-	resp.TypeName = "komodo"
+	resp.TypeName = providerTypeName
 	resp.Version = p.version
 }
 
@@ -48,15 +67,15 @@ func (p *KomodoProvider) Schema(ctx context.Context, req provider.SchemaRequest,
 		MarkdownDescription: "Terraform provider for managing Komodo resources via the Komodo API.",
 		Attributes: map[string]schema.Attribute{
 			"endpoint": schema.StringAttribute{
-				MarkdownDescription: "The Komodo API endpoint URL. Can also be set via the KOMODO_ENDPOINT environment variable.",
+				MarkdownDescription: "The Komodo API endpoint URL. Can also be set via the " + komodoEndpointEnv + " environment variable.",
 				Optional:            true,
 			},
 			"username": schema.StringAttribute{
-				MarkdownDescription: "The Komodo username. Can also be set via the KOMODO_USERNAME environment variable.",
+				MarkdownDescription: "The Komodo username. Can also be set via the " + komodoUsernameEnv + " environment variable.",
 				Optional:            true,
 			},
 			"password": schema.StringAttribute{
-				MarkdownDescription: "The Komodo password. Can also be set via the KOMODO_PASSWORD environment variable.",
+				MarkdownDescription: "The Komodo password. Can also be set via the " + komodoPasswordEnv + " environment variable.",
 				Optional:            true,
 				Sensitive:           true,
 			},
@@ -73,76 +92,90 @@ func (p *KomodoProvider) Configure(ctx context.Context, req provider.ConfigureRe
 		return
 	}
 
-	// Check for environment variables if not set in config
-	endpoint := data.Endpoint.ValueString()
-	if endpoint == "" {
-		endpoint = os.Getenv("KOMODO_ENDPOINT")
-	}
-
-	username := data.Username.ValueString()
-	if username == "" {
-		username = os.Getenv("KOMODO_USERNAME")
-	}
-
-	password := data.Password.ValueString()
-	if password == "" {
-		password = os.Getenv("KOMODO_PASSWORD")
-	}
-
-	// Validate required configuration
-	if endpoint == "" {
-		resp.Diagnostics.AddError(
-			"Missing Komodo Endpoint",
-			"The provider cannot create the Komodo API client as there is a missing or empty value for the Komodo endpoint. "+
-				"Set the endpoint value in the configuration or use the KOMODO_ENDPOINT environment variable. "+
-				"If either is already set, ensure the value is not empty.",
-		)
-	}
-
-	if username == "" {
-		resp.Diagnostics.AddError(
-			"Missing Komodo Username",
-			"The provider cannot create the Komodo API client as there is a missing or empty value for the Komodo username. "+
-				"Set the username value in the configuration or use the KOMODO_USERNAME environment variable. "+
-				"If either is already set, ensure the value is not empty.",
-		)
-	}
-
-	if password == "" {
-		resp.Diagnostics.AddError(
-			"Missing Komodo Password",
-			"The provider cannot create the Komodo API client as there is a missing or empty value for the Komodo password. "+
-				"Set the password value in the configuration or use the KOMODO_PASSWORD environment variable. "+
-				"If either is already set, ensure the value is not empty.",
-		)
-	}
+	config, diags := providerConfigFrom(data, os.Getenv)
+	resp.Diagnostics.Append(diags...)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Create Komodo API client
-	komodoClient := client.NewClient(endpoint, username, password)
+	komodoClient := client.NewClient(config.endpoint, config.username, config.password)
 	resp.DataSourceData = komodoClient
 	resp.ResourceData = komodoClient
 }
 
-func (p *KomodoProvider) Resources(ctx context.Context) []func() resource.Resource {
-	return []func() resource.Resource{
-		NewApiKeyResource,
+func providerConfigFrom(data KomodoProviderModel, lookupEnv func(string) string) (providerConfig, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	config := providerConfig{
+		endpoint: stringConfigValue(providerStringConfigSource{
+			value:       data.Endpoint,
+			attribute:   "endpoint",
+			envVar:      komodoEndpointEnv,
+			displayName: "Komodo Endpoint",
+		}, lookupEnv, &diags),
+		username: stringConfigValue(providerStringConfigSource{
+			value:       data.Username,
+			attribute:   "username",
+			envVar:      komodoUsernameEnv,
+			displayName: "Komodo Username",
+		}, lookupEnv, &diags),
+		password: stringConfigValue(providerStringConfigSource{
+			value:       data.Password,
+			attribute:   "password",
+			envVar:      komodoPasswordEnv,
+			displayName: "Komodo Password",
+		}, lookupEnv, &diags),
 	}
+
+	return config, diags
 }
 
-func (p *KomodoProvider) EphemeralResources(ctx context.Context) []func() ephemeral.EphemeralResource {
-	return []func() ephemeral.EphemeralResource{}
+func stringConfigValue(source providerStringConfigSource, lookupEnv func(string) string, diags *diag.Diagnostics) string {
+	if source.value.IsUnknown() {
+		addUnknownProviderConfigDiagnostic(source, diags)
+		return ""
+	}
+
+	if !source.value.IsNull() {
+		value := source.value.ValueString()
+		if value == "" {
+			addMissingProviderConfigDiagnostic(source, diags)
+		}
+		return value
+	}
+
+	value := lookupEnv(source.envVar)
+	if value == "" {
+		addMissingProviderConfigDiagnostic(source, diags)
+	}
+	return value
+}
+
+func addUnknownProviderConfigDiagnostic(source providerStringConfigSource, diags *diag.Diagnostics) {
+	diags.AddAttributeError(
+		path.Root(source.attribute),
+		"Unknown "+source.displayName,
+		"The "+source.attribute+" provider attribute must be known during provider configuration.",
+	)
+}
+
+func addMissingProviderConfigDiagnostic(source providerStringConfigSource, diags *diag.Diagnostics) {
+	diags.AddAttributeError(
+		path.Root(source.attribute),
+		"Missing "+source.displayName,
+		"Set the "+source.attribute+" provider attribute or the "+source.envVar+" environment variable.",
+	)
+}
+
+func (p *KomodoProvider) Resources(ctx context.Context) []func() resource.Resource {
+	return []func() resource.Resource{
+		NewAPIKeyResource,
+	}
 }
 
 func (p *KomodoProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{}
-}
-
-func (p *KomodoProvider) Functions(ctx context.Context) []func() function.Function {
-	return []func() function.Function{}
 }
 
 func New(version string) func() provider.Provider {

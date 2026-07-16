@@ -14,27 +14,28 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
-	"terraform-provider-komodo/internal/client"
+	"github.com/jkossis/terraform-provider-komodo/internal/client"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
-var _ resource.Resource = &ApiKeyResource{}
-var _ resource.ResourceWithImportState = &ApiKeyResource{}
+var _ resource.Resource = &APIKeyResource{}
+var _ resource.ResourceWithImportState = &APIKeyResource{}
 
-func NewApiKeyResource() resource.Resource {
-	return &ApiKeyResource{}
+func NewAPIKeyResource() resource.Resource {
+	return &APIKeyResource{}
 }
 
-// ApiKeyResource defines the resource implementation.
-type ApiKeyResource struct {
+// APIKeyResource defines the resource implementation.
+type APIKeyResource struct {
 	client *client.Client
 }
 
-// ApiKeyResourceModel describes the resource data model.
-type ApiKeyResourceModel struct {
+// APIKeyResourceModel describes the resource data model.
+type APIKeyResourceModel struct {
 	Key       types.String `tfsdk:"key"`
 	Secret    types.String `tfsdk:"secret"`
 	Name      types.String `tfsdk:"name"`
@@ -43,11 +44,11 @@ type ApiKeyResourceModel struct {
 	Expires   types.Int64  `tfsdk:"expires"`
 }
 
-func (r *ApiKeyResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_api_key"
+func (r *APIKeyResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = typeNamePrefix + "_api_key"
 }
 
-func (r *ApiKeyResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *APIKeyResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages a Komodo API key.",
 
@@ -73,6 +74,9 @@ func (r *ApiKeyResource) Schema(ctx context.Context, req resource.SchemaRequest,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
+				Validators: []validator.String{
+					nonEmptyStringValidator{description: "API key name must not be empty"},
+				},
 			},
 			"user_id": schema.StringAttribute{
 				Computed:            true,
@@ -93,12 +97,15 @@ func (r *ApiKeyResource) Schema(ctx context.Context, req resource.SchemaRequest,
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.RequiresReplace(),
 				},
+				Validators: []validator.Int64{
+					int64AtLeastValidator{min: 0, description: "API key expiration must be greater than or equal to 0"},
+				},
 			},
 		},
 	}
 }
 
-func (r *ApiKeyResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *APIKeyResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
@@ -117,8 +124,8 @@ func (r *ApiKeyResource) Configure(ctx context.Context, req resource.ConfigureRe
 	r.client = client
 }
 
-func (r *ApiKeyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data ApiKeyResourceModel
+func (r *APIKeyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var data APIKeyResourceModel
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 
@@ -131,12 +138,12 @@ func (r *ApiKeyResource) Create(ctx context.Context, req resource.CreateRequest,
 		"expires": data.Expires.ValueInt64(),
 	})
 
-	createReq := client.CreateApiKeyRequest{
+	createReq := client.CreateAPIKeyRequest{
 		Name:    data.Name.ValueString(),
 		Expires: data.Expires.ValueInt64(),
 	}
 
-	key, err := r.client.CreateApiKey(ctx, createReq)
+	key, err := r.client.CreateAPIKey(ctx, createReq)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create API key, got error: %s", err))
 		return
@@ -154,8 +161,8 @@ func (r *ApiKeyResource) Create(ctx context.Context, req resource.CreateRequest,
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r *ApiKeyResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var data ApiKeyResourceModel
+func (r *APIKeyResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var data APIKeyResourceModel
 
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 
@@ -164,7 +171,7 @@ func (r *ApiKeyResource) Read(ctx context.Context, req resource.ReadRequest, res
 	}
 
 	keyID := data.Key.ValueString()
-	key, err := r.client.GetApiKey(ctx, keyID)
+	key, err := r.client.GetAPIKey(ctx, keyID)
 
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read API key, got error: %s", err))
@@ -182,13 +189,13 @@ func (r *ApiKeyResource) Read(ctx context.Context, req resource.ReadRequest, res
 	data.Name = types.StringValue(key.Name)
 	data.CreatedAt = types.Int64Value(key.CreatedAt)
 	data.Expires = types.Int64Value(key.Expires)
-	// Note: Secret is not returned by GetApiKey (only on creation), so we keep the existing value
+	// Secret is not returned by GetAPIKey (only on creation), so retain the existing value.
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r *ApiKeyResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data ApiKeyResourceModel
+func (r *APIKeyResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var data APIKeyResourceModel
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 
@@ -196,17 +203,14 @@ func (r *ApiKeyResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	// The Komodo API doesn't support updating API keys, so we need to delete and recreate
-	// However, since name changes would require this, we'll just update the state
-	// In practice, users should use ForceNew for name changes if needed
-
-	tflog.Trace(ctx, "Updated API key resource (no-op - API keys cannot be updated)")
+	// Configurable attributes require replacement, so Update has no API operation.
+	tflog.Trace(ctx, "API key resource update is a no-op")
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r *ApiKeyResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var data ApiKeyResourceModel
+func (r *APIKeyResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var data APIKeyResourceModel
 
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 
@@ -218,7 +222,7 @@ func (r *ApiKeyResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		"key": data.Key.ValueString(),
 	})
 
-	err := r.client.DeleteApiKey(ctx, client.DeleteApiKeyRequest{
+	err := r.client.DeleteAPIKey(ctx, client.DeleteAPIKeyRequest{
 		Key: data.Key.ValueString(),
 	})
 
@@ -230,6 +234,6 @@ func (r *ApiKeyResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	tflog.Trace(ctx, "Deleted API key resource")
 }
 
-func (r *ApiKeyResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *APIKeyResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("key"), req, resp)
 }
